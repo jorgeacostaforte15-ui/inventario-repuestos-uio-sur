@@ -1,0 +1,14 @@
+# Dependencias y builds (Vercel los regenera)
+node_modules/
+.next/
+.build/
+dist/
+out/
+# Entorno y secretos
+.env
+.env.local
+.env*.local
+# Logs y temporales
+*.log
+tsconfig.tsbuildinfo
+.DS_Store

@@ -1,0 +1,145 @@
+generator client {
+    provider = "prisma-client-js"
+    binaryTargets = ["native", "linux-musl-arm64-openssl-3.0.x", "rhel-openssl-1.0.x", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  USUARIO
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  role          Role      @default(USUARIO)
+  accounts      Account[]
+  sessions      Session[]
+  uploads       DailyUpload[]
+  counts          DailyItem[]
+  manualSurpluses ManualSurplus[]
+  createdAt       DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Account {
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([provider, providerAccountId])
+}
+
+model Session {
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@id([identifier, token])
+}
+
+model ArticleCatalog {
+  id               String   @id @default(cuid())
+  articleNumber    String   @unique
+  description      String
+  manufacturer     String   @default("")
+  locationCode     String   @default("")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  dailyItems       DailyItem[]
+
+  @@index([description])
+  @@index([locationCode])
+  @@index([manufacturer])
+}
+
+model DailyUpload {
+  id             String      @id @default(cuid())
+  snapshotDate   DateTime
+  fileName       String
+  cloudStoragePath String?
+  isPublic       Boolean     @default(false)
+  totalArticles  Int         @default(0)
+  uploadedById   String
+  uploadedBy     User        @relation(fields: [uploadedById], references: [id])
+  items            DailyItem[]
+  manualSurpluses  ManualSurplus[]
+  createdAt        DateTime    @default(now())
+
+  @@unique([snapshotDate])
+  @@index([snapshotDate])
+}
+
+model DailyItem {
+  id              String        @id @default(cuid())
+  uploadId        String
+  upload          DailyUpload   @relation(fields: [uploadId], references: [id], onDelete: Cascade)
+  articleId       String
+  article         ArticleCatalog @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  stockSystem     Float         @default(0)
+  costItem        Float         @default(0)
+  price           Float         @default(0)
+  stockPhysical   Float?
+  difference      Float?
+  observation1    String?       @default("")
+  observation2    String?       @default("")
+  countedById     String?
+  countedBy       User?         @relation(fields: [countedById], references: [id])
+  countedAt       DateTime?
+  recounted       Boolean       @default(false)
+  lastSaleDate    DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@unique([uploadId, articleId])
+  @@index([uploadId])
+  @@index([articleId])
+  @@index([difference])
+}
+
+model ManualSurplus {
+  id              String        @id @default(cuid())
+  uploadId        String
+  upload          DailyUpload   @relation(fields: [uploadId], references: [id], onDelete: Cascade)
+  articleNumber   String
+  description     String        @default("")
+  manufacturer    String        @default("")
+  locationCode    String        @default("")
+  stockPhysical   Float         @default(0)
+  observation     String        @default("")
+  addedById       String
+  addedBy         User          @relation(fields: [addedById], references: [id])
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([uploadId])
+  @@index([articleNumber])
+}
